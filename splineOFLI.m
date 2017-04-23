@@ -4,6 +4,9 @@
 % getOFLIYY2_ODE_System could produce an arbitrary propagator for checking
 % higher order trajectory perturbations given an analytic geometry, but
 % this function will take points in and produces a cubic spline.
+%
+% First repeated different types of behavior- periodic, quasiperiodic, and
+% chaotic- on April 22, 2017. See spline_success.fig.
 
 %% First we start with crossed dipole potential for comparison
 %
@@ -21,12 +24,13 @@ uu = u(xx,yy,zz);
 % see what it looks like:
 % figure; fnplt(uu);
 
-%pcs for potential cubic spline. It's inverted in advance: ?(-u)/?x = +f
-pcs = csapi({x,y,z},-uu);
+%potential spline. It's inverted in advance: ?(-u)/?x = +f
+o = 5; %order
+splinepot = spapi({o+1,o+1,o+1},{x,x,z},-uu);
 
 % Take directional derivatives to get the forces.
 % a is a three valued spline; a = (ax ay az).
-a = fndir(pcs,eye(3));
+a = fndir(splinepot,eye(3));
 
 % % Setup an ODE and solve it.
 % f = @(t,y) [y(4); y(5); y(6); fnval(a,y(1:3))] ;
@@ -67,7 +71,7 @@ f = @(t,y) ...
 % Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
 % optical dipole trap" González-Férez et al, PRE 2014.
 % Get vz with total energy -0.6:
-xi = 430e-3; yi = 430e-3; zi = 0;
+xi = 300e-3; yi = 0e-3; zi = 0;
 vz = sqrt(-.6*2-2*u(xi,yi,zi));
 
 % Initial position.
@@ -84,7 +88,7 @@ d2y0 = zeros(1,6);
 % Solve the ODE and keep track of how long it takes.
 tic
 options = odeset('RelTol',1e-6,'AbsTol',1e-7);%,'OutputFcn','odeplot');
-sol = ode45(f,[0 1000],[y0 dy0 d2y0],options);
+sol = ode45(f,[0 100],[y0 dy0 d2y0],options);
 toc
 
 %
@@ -95,148 +99,24 @@ d2y = sol.y(13:18,:);
 
 % Get flows for OFLI calculation
 flowy = y;
-flowd2y = y;
 for i=1:max(size(sol.y))
     temp = f(0,sol.y(:,i));
     flowy(1:6,i) = temp(1:6);
-    flowd2y(1:6,i) = temp(13:18);
 end
 
 % Define projector
 projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
 
 % Finalize OFLI terms
-ofli1 = dy - projection(dy,flowy);
-fli2 = (dy+.5*d2y);
-ofli2 = fli2 - projection(fli2,flowy);
-ofli2n = sqrt(sum(ofli2.^2));
-
-%figure(23); hold on;
-%plot(sol.x,log10(ofli2n))
+fli2 = (dy+0.5*d2y);
+ofli2p = fli2 - projection(fli2,flowy);
+ofli2n = sqrt(sum(ofli2p.^2));
 
 figure(111111)
 hold on
 plot(sol.x,ofli2n)
-%ylim([-10 25])
-%xlim([0 1000])
-
-
-%
-% Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
-% optical dipole trap" González-Férez et al, PRE 2014.
-% Get vz with total energy -0.6:
-xi = 400e-3; yi = 0e-3; zi = 0;
-vz = sqrt(-.6*2-2*u(xi,yi,zi));
-
-% Initial position.
-y0 = [xi yi zi 0 0 vz];
-
-% Initial dy. Should be along the "flow" and a unit vector:
-dy0 = f(0,[y0 zeros(1,12)]');
-dy0 = dy0(1:6);
-dy0 = dy0'/sqrt(sum(dy0.^2));
-
-% Initial d2y=0.
-d2y0 = zeros(1,6);
-
-% Solve the ODE and keep track of how long it takes.
-tic
-options = odeset('RelTol',1e-6,'AbsTol',1e-7);%,'OutputFcn','odeplot');
-sol = ode45(f,[0 1000],[y0 dy0 d2y0],options);
-toc
-
-%
-% Unpack the solutions
-y = sol.y(1:6,:);
-dy = sol.y(7:12,:);
-d2y = sol.y(13:18,:);
-
-% Get flows for OFLI calculation
-flowy = y;
-flowd2y = y;
-for i=1:max(size(sol.y))
-    temp = f(0,sol.y(:,i));
-    flowy(1:6,i) = temp(1:6);
-    flowd2y(1:6,i) = temp(13:18);
-end
-
-% Define projector
-projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
-
-% Finalize OFLI terms
-ofli1 = dy - projection(dy,flowy);
-fli2 = (dy+.5*d2y);
-ofli2 = fli2 - projection(fli2,flowy);
-ofli2n = sqrt(sum(ofli2.^2));
-
-%figure(23); hold on;
-%plot(sol.x,log10(ofli2n))
-
-figure(111111)
-hold on
-plot(sol.x,ofli2n)
-%ylim([-10 25])
-%xlim([0 1000])
-
-
-
-%
-% Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
-% optical dipole trap" González-Férez et al, PRE 2014.
-% Get vz with total energy -0.6:
-xi = 0e-3; yi = 0e-3; zi = 0;
-vz = sqrt(-.6*2-2*u(xi,yi,zi));
-
-% Initial position.
-y0 = [xi yi zi 0 0 vz];
-
-% Initial dy. Should be along the "flow" and a unit vector:
-dy0 = f(0,[y0 zeros(1,12)]');
-dy0 = dy0(1:6);
-dy0 = dy0'/sqrt(sum(dy0.^2));
-
-% Initial d2y=0.
-d2y0 = zeros(1,6);
-
-% Solve the ODE and keep track of how long it takes.
-tic
-options = odeset('RelTol',1e-6,'AbsTol',1e-7);%,'OutputFcn','odeplot');
-sol = ode45(f,[0 1000],[y0 dy0 d2y0],options);
-toc
-
-%
-% Unpack the solutions
-y = sol.y(1:6,:);
-dy = sol.y(7:12,:);
-d2y = sol.y(13:18,:);
-
-% Get flows for OFLI calculation
-flowy = y;
-flowd2y = y;
-for i=1:max(size(sol.y))
-    temp = f(0,sol.y(:,i));
-    flowy(1:6,i) = temp(1:6);
-    flowd2y(1:6,i) = temp(13:18);
-end
-
-% Define projector
-projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
-
-% Finalize OFLI terms
-ofli1 = dy - projection(dy,flowy);
-fli2 = (dy+.5*d2y);
-ofli2 = fli2 - projection(fli2,flowy);
-ofli2n = sqrt(sum(ofli2.^2));
-
-%figure(23); hold on;
-%plot(sol.x,log10(ofli2n))
-
-figure(111111)
-hold on
-plot(sol.x,ofli2n)
-%ylim([-10 25])
-%xlim([0 1000])
-
-
-
-
+grid on
+set(gca,'YScale','log')
+set(gca,'XScale','log')
+xlim([1 100])
+ylim([0.1 100])
