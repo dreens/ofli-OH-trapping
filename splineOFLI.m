@@ -8,6 +8,8 @@
 % First repeated different types of behavior- periodic, quasiperiodic, and
 % chaotic- on April 22, 2017. See spline_success.fig.
 
+function out = splineOFLIfunc()
+
 %% First we start with crossed dipole potential for comparison
 %
 % U = -exp(-2x^2-2z^2)/2-exp(-2y^2-2z^2)/2
@@ -88,7 +90,7 @@ d2y0 = zeros(1,6);
 % Solve the ODE and keep track of how long it takes.
 tic
 options = odeset('RelTol',1e-6,'AbsTol',1e-7);%,'OutputFcn','odeplot');
-sol = ode45(f,[0 100],[y0 dy0 d2y0],options);
+sol = ode45(f,[0 1000],[y0 dy0 d2y0],options);
 toc
 
 %
@@ -112,11 +114,16 @@ fli2 = (dy+0.5*d2y);
 ofli2p = fli2 - projection(fli2,flowy);
 ofli2n = sqrt(sum(ofli2p.^2));
 
-figure(111111)
-hold on
-plot(sol.x,ofli2n)
-grid on
-set(gca,'YScale','log')
-set(gca,'XScale','log')
-xlim([1 100])
-ylim([0.1 100])
+
+out = ofli2n;
+
+end
+
+%figure(111111)
+%hold on
+%plot(sol.x,ofli2n)
+%grid on
+%set(gca,'YScale','log')
+%set(gca,'XScale','log')
+%xlim([1 100])
+%ylim([0.1 100])

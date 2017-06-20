@@ -3,7 +3,7 @@
 % This is a merge of splineOFLI.m and run_crossed_dipole_frame.m. The goal
 % is to see how well the spline version does the full panel from their
 % paper. 
-function ofli2 = splineOFLIframe(N)
+function ofli2 = splineOFLIframe2(N,E)
 
 % function giving unitless potential energy
 u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
@@ -57,11 +57,10 @@ f = @(t,y) ...
 % velocity orthogonal to the plane. All have their velocity chosen
 % according to their initial potential energy so that total energy is the
 % same.
-etot = -0.6;
 x = linspace(-1,1,N);
 y = linspace(-1,1,N);
 [xs, ys] = meshgrid(x,y);
-vz = sqrt(etot*2-2*u(xs,ys,0));
+vz = sqrt(E*2-2*u(xs,ys,0));
 
 % All ofli results in the plane will be stored in this variable
 ofli2 = zeros(N,N);
