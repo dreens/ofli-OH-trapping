@@ -3,7 +3,11 @@
 % This is a merge of splineOFLI.m and run_crossed_dipole_frame.m. The goal
 % is to see how well the spline version does the full panel from their
 % paper. 
-function ofli2 = splineOFLIframe2(N,E)
+%
+% N = number of pixels length and width of frame.
+% E = energy of the frame, negative is trapped.
+% X = exponent of time to run to. 3 is ideal, but slow.
+function ofli2 = splineOFLIframe(N,E,X)
 
 % function giving unitless potential energy
 u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
@@ -82,7 +86,7 @@ parfor i=1:N
             dy0 = dy0'/sqrt(sum(dy0.^2));
             
             % Solve the ODE
-            sol = ode45(f,[0 logspace(0,1,100)],[y0 dy0 zeros(1,6)],options);
+            sol = ode45(f,[0 logspace(0,X,100)],[y0 dy0 zeros(1,6)],options);
 
             % Unpack the solutions
             y = sol.y(1:6,:);
