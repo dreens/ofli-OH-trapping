@@ -69,7 +69,7 @@ f = @(t,y) ...
 x = linspace(-1,1,N);
 y = linspace(-1,1,N);
 [xs, ys] = meshgrid(x,y);
-vz = sqrt(E*2-2*u(xs,ys,0));
+vz = sqrt(E*2+2*splinepot(xs,ys,0));
 
 % All ofli results in the plane will be stored in this variable
 ofli2 = zeros(N,N);
