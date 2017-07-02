@@ -7,13 +7,15 @@
 %
 % First repeated different types of behavior- periodic, quasiperiodic, and
 % chaotic- on April 22, 2017. See spline_success.fig.
+%
+% Rebranded as a function that can evaluate OFLI at a single point. I
+% basically took the modifications done to get a frame running on the
+% cluster and brought them back to some extent into this earlier edition.
 
-function out = splineOFLIfunc()
+function out = splineOFLI(E,X,trap)
 
 %% First we start with crossed dipole potential for comparison
 %
-% U = -exp(-2x^2-2z^2)/2-exp(-2y^2-2z^2)/2
-u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
 
 lim = 1;
 dense = 20;
@@ -21,7 +23,15 @@ x = -lim:lim/dense:lim;
 y = x;
 z = x;
 [xx,yy,zz] = ndgrid(x,y,z);
-uu = u(xx,yy,zz);
+
+
+if strcmp(trap,'xdip')
+    u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
+    uu = u(xx,yy,zz);
+elseif strcmp(trap,'pin')
+    load('pininterp.mat','uu');
+end
+
 
 % see what it looks like:
 % figure; fnplt(uu);
@@ -73,8 +83,8 @@ f = @(t,y) ...
 % Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
 % optical dipole trap" González-Férez et al, PRE 2014.
 % Get vz with total energy -0.6:
-xi = 300e-3; yi = 0e-3; zi = 0;
-vz = sqrt(-.6*2-2*u(xi,yi,zi));
+xi = 50e-3; yi = 50e-3; zi = 0;
+vz = sqrt(E*2+2*fnval(splinepot,[xi; yi; 0]));
 
 % Initial position.
 y0 = [xi yi zi 0 0 vz];
@@ -87,37 +97,64 @@ dy0 = dy0'/sqrt(sum(dy0.^2));
 % Initial d2y=0.
 d2y0 = zeros(1,6);
 
+% Output function trajectories only
+function stop = trimplot(t,y,flag,varargin)
+    if size(y,1)>=6
+        stop = odeplot(t,y(1:6,:),flag,varargin);
+    else
+        stop = false;
+    end
+end
+
+% "Event" Function to exit if the molecule flies out.
+function [vals, terms, dirs] = escape(t,y) 
+    %vals = y([1:6 1:6]')-10*[ones(6,1);-ones(6,1)];
+    %terms = ones(12,1);
+    %dirs = zeros(12,1);
+    vals = max(abs(y(1:6)))-10;
+    terms = 1;
+    dirs = 0;
+end
+
 % Solve the ODE and keep track of how long it takes.
-tic
-options = odeset('RelTol',1e-6,'AbsTol',1e-7);%,'OutputFcn','odeplot');
-sol = ode45(f,[0 1000],[y0 dy0 d2y0],options);
-toc
+options = odeset('RelTol',1e-6,'AbsTol',1e-7,'OutputFcn',@trimplot,'Events',@escape);
+sol = ode45(f,[0 10^X],[y0 dy0 d2y0],options);
 
-%
-% Unpack the solutions
-y = sol.y(1:6,:);
-dy = sol.y(7:12,:);
-d2y = sol.y(13:18,:);
+% Check for escape
+if sol.x(end)<10^X
+    out = -2;
+else
 
-% Get flows for OFLI calculation
-flowy = y;
-for i=1:max(size(sol.y))
-    temp = f(0,sol.y(:,i));
-    flowy(1:6,i) = temp(1:6);
+    % Unpack the solutions
+    y = sol.y(1:6,:);
+    dy = sol.y(7:12,:);
+    d2y = sol.y(13:18,:);
+
+    % Get flows for OFLI calculation
+    flowy = y;
+    for i=1:max(size(sol.y))
+        temp = f(0,sol.y(:,i));
+        flowy(1:6,i) = temp(1:6);
+    end
+
+    % Define projector
+    projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
+
+    % Finalize OFLI terms
+    fli2 = (dy+0.5*d2y);
+    ofli2p = fli2 - projection(fli2,flowy);
+    ofli2n = sqrt(sum(ofli2p.^2));
+
+
+    out = ofli2n;
 end
 
-% Define projector
-projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
-
-% Finalize OFLI terms
-fli2 = (dy+0.5*d2y);
-ofli2p = fli2 - projection(fli2,flowy);
-ofli2n = sqrt(sum(ofli2p.^2));
-
-
-out = ofli2n;
-
 end
+
+% check energy
+%figure;hold on
+%plot(0.7-fnval(splinepot,sol.y(1:3,:))+.5*sum(sol.y(4:6,:).^2))
+% With rel 1e-6, abs 1e-7, 1.6e-8 energy lost in time = 100;
 
 %figure(111111)
 %hold on

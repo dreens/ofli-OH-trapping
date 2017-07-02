@@ -7,10 +7,10 @@
 % N = number of pixels length and width of frame.
 % E = energy of the frame, negative is trapped.
 % X = exponent of time to run to. 3 is ideal, but slow.
-function ofli2 = splineOFLIframe(N,E,X)
+% trap = "xdip" for crossed dipole or "pin" for pintrap.
+% Assumes X=0, Y=0 mirror symmetry.
+function ofli2 = splineOFLIframe(N,E,X,trap)
 
-% function giving unitless potential energy
-u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
 
 % setup the grid to use for defining the spline
 lim = 1;
@@ -19,7 +19,14 @@ x = -lim:lim/dense:lim;
 y = x;
 z = x;
 [xx,yy,zz] = ndgrid(x,y,z);
-uu = u(xx,yy,zz);
+
+% function giving unitless potential energy
+if strcmp(trap,'xdip')
+    u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
+    uu = u(xx,yy,zz);
+elseif strcmp(trap,'pin')
+    load('pininterp.mat','uu');
+end
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
 o = 5; %order
@@ -61,16 +68,25 @@ f = @(t,y) ...
 % velocity orthogonal to the plane. All have their velocity chosen
 % according to their initial potential energy so that total energy is the
 % same.
-x = linspace(-1,1,N);
-y = linspace(-1,1,N);
+x = linspace(0,1,N);
+y = linspace(0,1,N);
 [xs, ys] = meshgrid(x,y);
-vz = sqrt(E*2-2*u(xs,ys,0));
+vz = zeros(size(xs));
+vz(:) = sqrt(E*2+2*fnval(splinepot,[xs(:)';ys(:)';zeros(size(xs(:)'))]));
 
 % All ofli results in the plane will be stored in this variable
 ofli2 = zeros(N,N);
 
+% This function checks for escaping the trap, and is registered as an
+% "event" indicating termination by the ode solver.
+function [vals, terminal, dir] = escape(~,y) 
+    vals = max(abs(y(1:6)))-10;
+    terminal = 1;
+    dir = 0;
+end
+
 % Defining this once instead of every time:
-options = odeset('RelTol',2e-6,'AbsTol',2e-7);
+options = odeset('RelTol',2e-6,'AbsTol',2e-7,'Events',@escape);
 
 parfor i=1:N
     for j=1:N
@@ -94,8 +110,8 @@ parfor i=1:N
             d2y = sol.y(13:18,:);
             
             % Note if orbit escaped the trap (or at least the spline)
-            if max(max(abs(y(:,1:3))))>lim
-                ofli2(i,j) = 100;
+            if sol.x(end) < 10^X
+                ofli2(i,j) = -2;
             else
 
                 % Get flows for OFLI calculation
