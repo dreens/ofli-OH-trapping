@@ -83,7 +83,7 @@ f = @(t,y) ...
 % Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
 % optical dipole trap" González-Férez et al, PRE 2014.
 % Get vz with total energy -0.6:
-xi = 50e-3; yi = 50e-3; zi = 0;
+xi = 100e-3; yi = 100e-3; zi = 0;
 vz = sqrt(E*2+2*fnval(splinepot,[xi; yi; 0]));
 
 % Initial position.
@@ -100,7 +100,26 @@ d2y0 = zeros(1,6);
 % Output function trajectories only
 function stop = trimplot(t,y,flag,varargin)
     if size(y,1)>=6
-        stop = odeplot(t,y(1:6,:),flag,varargin);
+        stop = odeplot(t,y(13:18,:),flag,varargin);
+    else
+        stop = false;
+    end
+end
+
+% Try plotting OFLI live
+function stop = oflilive(t,y,flag,varargin)
+    if size(y,1)>=6
+        y1 = y(1:6);
+        y2 = y(7:12);
+        y3 = y(13:18);
+        fy = f(0,y);
+        fy = fy(1:6);
+        fl = (y2+0.5*y3);
+        pj = @(a,b) b*sum(a.*b)./sum(b.^2);
+        ofl = fl - pj(fl,fy);
+        ofl = sqrt(sum(ofl.^2));
+
+        stop = odeplot(t,y(13:18,:),flag,varargin);
     else
         stop = false;
     end
@@ -117,8 +136,8 @@ function [vals, terms, dirs] = escape(t,y)
 end
 
 % Solve the ODE and keep track of how long it takes.
-options = odeset('RelTol',1e-6,'AbsTol',1e-7,'OutputFcn',@trimplot,'Events',@escape);
-sol = ode45(f,[0 10^X],[y0 dy0 d2y0],options);
+options = odeset('RelTol',2e-10,'AbsTol',2e-10,'OutputFcn',@trimplot,'Events',@escape);
+sol = ode45(f,[0 100],[y0 dy0 d2y0],options);
 
 % Check for escape
 if sol.x(end)<10^X

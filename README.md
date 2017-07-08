@@ -23,3 +23,11 @@ In the meanwhile, what else does this project need to become a paper?
 -Obviously super pretty pictures from all slices of the pin trap at various energies.
 -Can I take any hard data or ask any chaos related questions?
 -Is there a trap with chaos at arbitrarily low energies? What would this do to evaporation or BEC?
+
+# update 7/7/17
+Some of the pin data finished, but the ofli metric was getting absurdly large (overflowing in some cases, like 10^600 something for matlab!!!). I’m not sure what this means. I’ve been spot checking a few trajectories, and messing with the precision of the ODE solver. I’ve definitely observed some dependence on the precision, one time specifically at a zero crossing of one coordinate, but it wasn’t clear that it was dramatically changing the classification of an orbit as stable, quasiperiodic, or chaotic.
+
+Hypotheses:
+1. Even at E=-0.8, essentially all orbits are chaotic, explaining the static-y panel and the large ofli2 values.
+2. The oscillation frequency is larger than the crossed dipole trap, thus requiring less integration time to differentiate the orbits.
+3. Low precision could be the culprit, preventing any truly quasi-periodic or periodic orbits from showing as such.
