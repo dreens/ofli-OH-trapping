@@ -31,3 +31,10 @@ Hypotheses:
 1. Even at E=-0.8, essentially all orbits are chaotic, explaining the static-y panel and the large ofli2 values.
 2. The oscillation frequency is larger than the crossed dipole trap, thus requiring less integration time to differentiate the orbits.
 3. Low precision could be the culprit, preventing any truly quasi-periodic or periodic orbits from showing as such.
+
+# update 8/2/17
+Plan of action regarding the above:
+1. Tell solver to give up after the OFLI goes above 10^10.
+2. Get frame to save some intermediate time data for each frame. Will vastly increase data generated, but will give options for determining best run-time for distinguishing chaotic, quasiperiodic, and periodic.
+3. Run a dense grid at E=-0.9.
+4. (optional) get things working in another plane, maybe xz plane instead of xy.

@@ -109,17 +109,20 @@ end
 % Try plotting OFLI live
 function stop = oflilive(t,y,flag,varargin)
     if size(y,1)>=6
-        y1 = y(1:6);
-        y2 = y(7:12);
-        y3 = y(13:18);
-        fy = f(0,y);
-        fy = fy(1:6);
+        y1 = y(1:6,:);
+        y2 = y(7:12,:);
+        y3 = y(13:18,:);
+        fy = zeros(size(y));
+        for ii=1:size(y,2)
+            fy(:,ii) = f(0,y(:,ii));
+        end
+        fy = fy(1:6,:);
         fl = (y2+0.5*y3);
-        pj = @(a,b) b*sum(a.*b)./sum(b.^2);
+        pj = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
         ofl = fl - pj(fl,fy);
         ofl = sqrt(sum(ofl.^2));
 
-        stop = odeplot(t,y(13:18,:),flag,varargin);
+        stop = odeplot(t,ofl,flag,varargin);
     else
         stop = false;
     end
@@ -136,7 +139,7 @@ function [vals, terms, dirs] = escape(t,y)
 end
 
 % Solve the ODE and keep track of how long it takes.
-options = odeset('RelTol',2e-10,'AbsTol',2e-10,'OutputFcn',@trimplot,'Events',@escape);
+options = odeset('RelTol',2e-10,'AbsTol',2e-10,'OutputFcn',@oflilive,'Events',@escape);
 sol = ode45(f,[0 100],[y0 dy0 d2y0],options);
 
 % Check for escape
