@@ -85,16 +85,27 @@ ofli2 = zeros(N,N,T);
 
 % This function checks for escaping the trap, and is registered as an
 % "event" indicating termination by the ode solver.
-function [vals, terminal, dir] = escape(~,y) 
-    vals = max(abs(y(1:6)))-10;
-    terminal = 1;
-    dir = 0;
+function [vals, terms, dirs] = escape(~,y) 
+    y2 = y(7:12);
+    y3 = y(13:18);
+    fy = f(0,y);
+    fy = fy(1:6);
+    fl = (y2+0.5*y3);
+    pj = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
+    ofl = fl - pj(fl,fy);
+    ofl = sqrt(sum(ofl.^2));
+    
+    val1 = max(abs(y(1:6)))-10;
+    val2 = ofl-10^1;
+    vals = [val1 val2];
+    terms = [1 1];
+    dirs = [0 0];
 end
 
 % Defining this once instead of every time:
-options = odeset('RelTol',2e-6,'AbsTol',2e-7,'Events',@escape);
+options = odeset('RelTol',1e-6,'AbsTol',1e-6,'Events',@escape);
 
-parfor i=1:N
+for i=1:N
     for j=1:N
         % Given the specified energy, some startpoints will be out of
         % reach. We can tell if vz is imaginary:
@@ -117,7 +128,7 @@ parfor i=1:N
             end
             
             % Unpack the solutions
-            ntimes = times(times<=max(sol.x))
+            ntimes = times(times<=max(sol.x));
             yall = deval(sol,ntimes);
             y   =  yall(1:6,:);
             dy  =  yall(7:12,:);
@@ -125,9 +136,9 @@ parfor i=1:N
 
             % Get flows for OFLI calculation
             flowy = y;
-            for k=1:max(size(sol.y))
-                temp = f(0,sol.y(:,k));
-                flowy(1:6,k) = temp(1:6);
+            for l=1:length(ntimes)
+                temp = f(0,yall(:,l));
+                flowy(1:6,l) = temp(1:6);
             end
 
             % Define projector
@@ -139,7 +150,7 @@ parfor i=1:N
             ofli2row(1:length(ntimes)) = log(sqrt(sum(ofli2p.^2)));
         end
         for k=1:T
-            ofli2(i,j,k) = ofli2row(k)
+            ofli2(i,j,k) = ofli2row(k);
         end
     end
 end
