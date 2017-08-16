@@ -11,6 +11,12 @@
 % Assumes X=0, Y=0 mirror symmetry.
 function ofli2 = splineOFLIframe(N,E,X,trap)
 
+% lets collect info for a few different integration times:
+T = 20;
+maxT = 200;
+lT = log10(maxT);
+times = logspace(lT-2,lT,20);
+
 
 % setup the grid to use for defining the spline
 lim = 1;
@@ -75,7 +81,7 @@ vz = zeros(size(xs));
 vz(:) = sqrt(E*2+2*fnval(splinepot,[xs(:)';ys(:)';zeros(size(xs(:)'))]));
 
 % All ofli results in the plane will be stored in this variable
-ofli2 = zeros(N,N);
+ofli2 = zeros(N,N,T);
 
 % This function checks for escaping the trap, and is registered as an
 % "event" indicating termination by the ode solver.
@@ -92,43 +98,48 @@ parfor i=1:N
     for j=1:N
         % Given the specified energy, some startpoints will be out of
         % reach. We can tell if vz is imaginary:
+        ofli2row = zeros(1,T);
         if ~isreal(vz(i,j))
-            ofli2(i,j) = -1;
+            ofli2row = ofli2row - 1;
         else
             % Initialize the ODE solver
             y0 = [xs(i,j) ys(i,j) 0 0 0 vz(i,j)];
             dy0 = f(0,[y0 zeros(1,12)]');
             dy0 = dy0(1:6);
             dy0 = dy0'/sqrt(sum(dy0.^2));
-            
+
             % Solve the ODE
-            sol = ode45(f,[0 logspace(0,X,100)],[y0 dy0 zeros(1,6)],options);
+            sol = ode45(f,times,[y0 dy0 zeros(1,6)],options);
 
-            % Unpack the solutions
-            y = sol.y(1:6,:);
-            dy = sol.y(7:12,:);
-            d2y = sol.y(13:18,:);
-            
-            % Note if orbit escaped the trap (or at least the spline)
-            if sol.x(end) < 10^X
-                ofli2(i,j) = -2;
-            else
-
-                % Get flows for OFLI calculation
-                flowy = y;
-                for k=1:max(size(sol.y))
-                    temp = f(0,sol.y(:,k));
-                    flowy(1:6,k) = temp(1:6);
-                end
-
-                % Define projector
-                projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
-
-                % Finalize OFLI terms
-                fli2 = (dy+0.5*d2y);
-                ofli2p = fli2 - projection(fli2,flowy);
-                ofli2(i,j) = log(max(sqrt(sum(ofli2p.^2))));
+            % Check for erors
+            if ~isempty(sol.ie)
+                ofli2row = ofli2row + sol.ie;
             end
+            
+            % Unpack the solutions
+            ntimes = times(times<=max(sol.x))
+            yall = deval(sol,ntimes);
+            y   =  yall(1:6,:);
+            dy  =  yall(7:12,:);
+            d2y =  yall(13:18,:);
+
+            % Get flows for OFLI calculation
+            flowy = y;
+            for k=1:max(size(sol.y))
+                temp = f(0,sol.y(:,k));
+                flowy(1:6,k) = temp(1:6);
+            end
+
+            % Define projector
+            projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
+
+            % Finalize OFLI terms
+            fli2 = (dy+0.5*d2y);
+            ofli2p = fli2 - projection(fli2,flowy);
+            ofli2row(1:length(ntimes)) = log(sqrt(sum(ofli2p.^2)));
+        end
+        for k=1:T
+            ofli2(i,j,k) = ofli2row(k)
         end
     end
 end

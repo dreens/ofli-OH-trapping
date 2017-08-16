@@ -129,18 +129,26 @@ function stop = oflilive(t,y,flag,varargin)
 end
 
 % "Event" Function to exit if the molecule flies out.
-function [vals, terms, dirs] = escape(t,y) 
-    %vals = y([1:6 1:6]')-10*[ones(6,1);-ones(6,1)];
-    %terms = ones(12,1);
-    %dirs = zeros(12,1);
-    vals = max(abs(y(1:6)))-10;
-    terms = 1;
-    dirs = 0;
+function [vals, terms, dirs] = escape(~,y) 
+    y2 = y(7:12);
+    y3 = y(13:18);
+    fy = f(0,y);
+    fy = fy(1:6);
+    fl = (y2+0.5*y3);
+    pj = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
+    ofl = fl - pj(fl,fy);
+    ofl = sqrt(sum(ofl.^2));
+    
+    val1 = max(abs(y(1:6)))-10;
+    val2 = ofl-10^1;
+    vals = [val1 val2];
+    terms = [1 1];
+    dirs = [0 0];
 end
 
 % Solve the ODE and keep track of how long it takes.
-options = odeset('RelTol',2e-10,'AbsTol',2e-10,'OutputFcn',@oflilive,'Events',@escape);
-sol = ode45(f,[0 100],[y0 dy0 d2y0],options);
+options = odeset('RelTol',2e-8,'AbsTol',2e-8,'OutputFcn',@oflilive,'Events',@escape);
+sol = ode45(f,[0 10 50 100],[y0 dy0 d2y0],options);
 
 % Check for escape
 if sol.x(end)<10^X
@@ -168,7 +176,7 @@ else
     ofli2n = sqrt(sum(ofli2p.^2));
 
 
-    out = ofli2n;
+    out = sol;
 end
 
 end
