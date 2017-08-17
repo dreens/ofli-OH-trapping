@@ -13,9 +13,7 @@ function ofli2 = splineOFLIframe(N,E,X,trap)
 
 % lets collect info for a few different integration times:
 T = 20;
-maxT = 200;
-lT = log10(maxT);
-times = logspace(lT-2,lT,20);
+times = logspace(X-2,X,20);
 
 
 % setup the grid to use for defining the spline

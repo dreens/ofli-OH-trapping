@@ -38,3 +38,6 @@ Plan of action regarding the above:
 2. Get frame to save some intermediate time data for each frame. Will vastly increase data generated, but will give options for determining best run-time for distinguishing chaotic, quasiperiodic, and periodic.
 3. Run a dense grid at E=-0.9.
 4. (optional) get things working in another plane, maybe xz plane instead of xy.
+
+# update 8/16/17
+I've achieved all of the above except the different plane. Running a dense grid at E=-0.9 and E=-0.8
