@@ -93,19 +93,19 @@ function [vals, terms, dirs] = escape(~,y)
     fl = (y2+0.5*y3);
     pj = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
     ofl = fl - pj(fl,fy);
-    ofl = sqrt(sum(ofl.^2));
+    ofl = log10(sqrt(sum(ofl.^2)));
     
     val1 = max(abs(y(1:6)))-10;
-    val2 = ofl-10^1;
+    val2 = ofl-20;
     vals = [val1 val2];
     terms = [1 1];
     dirs = [0 0];
 end
 
 % Defining this once instead of every time:
-options = odeset('RelTol',1e-6,'AbsTol',1e-6,'Events',@escape);
+options = odeset('RelTol',1e-9,'AbsTol',1e-9,'Events',@escape);
 
-for i=1:N
+parfor i=1:N
     for j=1:N
         % Given the specified energy, some startpoints will be out of
         % reach. We can tell if vz is imaginary:
@@ -147,7 +147,7 @@ for i=1:N
             % Finalize OFLI terms
             fli2 = (dy+0.5*d2y);
             ofli2p = fli2 - projection(fli2,flowy);
-            ofli2row(1:length(ntimes)) = log(sqrt(sum(ofli2p.^2)));
+            ofli2row(1:length(ntimes)) = log10(sqrt(sum(ofli2p.^2)));
         end
         for k=1:T
             ofli2(i,j,k) = ofli2row(k);
