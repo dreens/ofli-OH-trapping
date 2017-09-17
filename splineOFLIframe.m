@@ -104,6 +104,7 @@ end
 options = odeset('RelTol',1e-9,'AbsTol',1e-9,'Events',@escape);
 
 parfor i=1:N
+    fprintf('%d\n',i)
     for j=1:N
         % Given the specified energy, some startpoints will be out of
         % reach. We can tell if vz is imaginary:
