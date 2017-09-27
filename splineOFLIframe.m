@@ -116,6 +116,10 @@ ofli2 = zeros(N,N,T);
 
 parfor i=1:N
     
+    % Declare this slice of the 3D variable:
+    oflislice = zeros(N,T);
+
+    
     % Look to see if this step in the parfar loop has been completed by a
     % previously attempted job submission. If so, get the results and reuse
     % them directly.
@@ -124,7 +128,7 @@ parfor i=1:N
         d = load(filestash);
         for j=1:N
             for k=1:T
-                ofli2(i,j,k) = d.stash(j,k);
+                oflislice(j,k) = d.stash(j,k);
             end
         end
     else
@@ -138,10 +142,6 @@ parfor i=1:N
         escape = @(t,y) escbase(t,y,f.ff);
         options = odeset('RelTol',10^-P,'AbsTol',10^-P,'Events',escape);
         
-        % This will be used to save all that is achieved in this parfor
-        % iteration separately as a back-up.
-        tobesaved = zeros(N,T);
-
         fprintf('%d\n',i)
         for j=1:N
             % Given the specified energy, some startpoints will be out of
@@ -186,13 +186,10 @@ parfor i=1:N
                 ofli2p = fli2 - projection(fli2,flowy);
                 ofli2row(1:length(ntimes)) = log10(sqrt(sum(ofli2p.^2)));
             end
-            for k=1:T
-                ofli2(i,j,k) = ofli2row(k);
-            end
             
             % better to only update the main parfor variable once, so we
             % use a separate guy for the saving functionality.
-            tobesaved(j,:) = ofli2row;
+            oflislice(j,:) = ofli2row;
             
         end % end for j=1:N
         
@@ -202,6 +199,11 @@ parfor i=1:N
         saveparfor(filestash,tobesaved)
         
     end % end if exist filestash
+    for j=1:N
+        for k=1:T
+            ofli2(i,j,k) = oflislice(j,k);
+        end
+    end
 end % end parfor i=1:N
 end % end function splineOFLIframe
 
