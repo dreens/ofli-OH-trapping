@@ -196,17 +196,13 @@ parfor i=1:N
         % Save the results of this step of the parfor loop directly so that
         % if the job is killed or runs out of time or jiliac crashes, we
         % don't start from scratch.
-        saveparfor(filestash,tobesaved)
+        saveparfor(filestash,oflislice)
         
     end % end if exist filestash
-    for j=1:N
-        for k=1:T
-            ofli2(i,j,k) = oflislice(j,k);
-        end
-    end
+    ofli2(i,:,:) = oflislice;
 end % end parfor i=1:N
 end % end function splineOFLIframe
 
 function saveparfor(file,stash)
-    save(file,'stash','v7.3')
+    save(file,'stash','-v7.3')
 end
