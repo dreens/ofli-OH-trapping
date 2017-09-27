@@ -36,7 +36,12 @@ end
 o = 5; %order
 splinepot = spapi({o+1,o+1,o+1},{x,x,z},-uu);
 
-if ~exist('//data/ye/dare4983/splines/pin.mat','file')
+% Let's define some directories
+datadir = '//data/ye/dare4983/splines/';
+thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
+mkdir(datadir,thisdir);
+
+if ~exist([datadir 'pin.mat'],'file')
     
 
     % Take directional derivatives to get the forces.
@@ -72,7 +77,7 @@ if ~exist('//data/ye/dare4983/splines/pin.mat','file')
      fnval(d2az,y(1:3))*y(9)       ) * y(7:9)   ]; 
  
     % Put the spline on the data drive maybe?
-    save('//data/ye/dare4983/splines/pin.mat','ff','-v7.3')
+    save([datadir 'pin.mat'],'ff','-v7.3')
 
 end
 
@@ -111,63 +116,95 @@ ofli2 = zeros(N,N,T);
 
 parfor i=1:N
     
-    % Now get the spline back out now that we're on a compute node:
-    f = load('//data/ye/dare4983/splines/pin.mat');
-    
-    % Now define options for the ODE solver. Would have done this outside
-    % the parfor, but it needs the spline that we need to separately load
-    % on the compute nodes to reduce information transfer.
-    escape = @(t,y) escbase(t,y,f.ff);
-    options = odeset('RelTol',10^-P,'AbsTol',10^-P,'Events',escape);
+    % Look to see if this step in the parfar loop has been completed by a
+    % previously attempted job submission. If so, get the results and reuse
+    % them directly.
+    filestash = [datadir thisdir '/i=' num2str(i) '.mat'];
+    if exist(filestash,'file')
+        d = load(filestash);
+        for j=1:N
+            for k=1:T
+                ofli2(i,j,k) = d.stash(j,k);
+            end
+        end
+    else
 
-    
-    fprintf('%d\n',i)
-    for j=1:N
-        % Given the specified energy, some startpoints will be out of
-        % reach. We can tell if vz is imaginary:
-        ofli2row = zeros(1,T);
-        if ~isreal(vz(i,j))
-            ofli2row = ofli2row - 1;
-        else
-            % Initialize the ODE solver
-            y0 = [xs(i,j) ys(i,j) 0 0 0 vz(i,j)];
-            dy0 = f.ff(0,[y0 zeros(1,12)]');
-            dy0 = dy0(1:6);
-            dy0 = dy0'/sqrt(sum(dy0.^2));
+        % Now get the spline back out now that we're on a compute node:
+        f = load([datadir 'pin.mat']);
 
-            % Solve the ODE
-            sol = ode45(f.ff,times,[y0 dy0 zeros(1,6)],options);
+        % Now define options for the ODE solver. Would have done this outside
+        % the parfor, but it needs the spline that we need to separately load
+        % on the compute nodes to reduce information transfer.
+        escape = @(t,y) escbase(t,y,f.ff);
+        options = odeset('RelTol',10^-P,'AbsTol',10^-P,'Events',escape);
+        
+        % This will be used to save all that is achieved in this parfor
+        % iteration separately as a back-up.
+        tobesaved = zeros(N,T);
 
-            % Check for erors
-            if ~isempty(sol.ie)
-                ofli2row = ofli2row + sol.ie;
+        fprintf('%d\n',i)
+        for j=1:N
+            % Given the specified energy, some startpoints will be out of
+            % reach. We can tell if vz is imaginary:
+            ofli2row = zeros(1,T);
+            if ~isreal(vz(i,j))
+                ofli2row = ofli2row - 1;
+            else
+                % Initialize the ODE solver
+                y0 = [xs(i,j) ys(i,j) 0 0 0 vz(i,j)];
+                dy0 = f.ff(0,[y0 zeros(1,12)]');
+                dy0 = dy0(1:6);
+                dy0 = dy0'/sqrt(sum(dy0.^2));
+
+                % Solve the ODE
+                sol = ode45(f.ff,times,[y0 dy0 zeros(1,6)],options);
+
+                % Check for erors
+                if ~isempty(sol.ie)
+                    ofli2row = ofli2row + sol.ie;
+                end
+
+                % Unpack the solutions
+                ntimes = times(times<=max(sol.x));
+                yall = deval(sol,ntimes);
+                y   =  yall(1:6,:);
+                dy  =  yall(7:12,:);
+                d2y =  yall(13:18,:);
+
+                % Get flows for OFLI calculation
+                flowy = y;
+                for l=1:length(ntimes)
+                    temp = f.ff(0,yall(:,l));
+                    flowy(1:6,l) = temp(1:6);
+                end
+
+                % Define projector
+                projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
+
+                % Finalize OFLI terms
+                fli2 = (dy+0.5*d2y);
+                ofli2p = fli2 - projection(fli2,flowy);
+                ofli2row(1:length(ntimes)) = log10(sqrt(sum(ofli2p.^2)));
+            end
+            for k=1:T
+                ofli2(i,j,k) = ofli2row(k);
             end
             
-            % Unpack the solutions
-            ntimes = times(times<=max(sol.x));
-            yall = deval(sol,ntimes);
-            y   =  yall(1:6,:);
-            dy  =  yall(7:12,:);
-            d2y =  yall(13:18,:);
-
-            % Get flows for OFLI calculation
-            flowy = y;
-            for l=1:length(ntimes)
-                temp = f.ff(0,yall(:,l));
-                flowy(1:6,l) = temp(1:6);
-            end
+            % better to only update the main parfor variable once, so we
+            % use a separate guy for the saving functionality.
+            tobesaved(j,:) = ofli2row;
             
-            % Define projector
-            projection = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
+        end % end for j=1:N
+        
+        % Save the results of this step of the parfor loop directly so that
+        % if the job is killed or runs out of time or jiliac crashes, we
+        % don't start from scratch.
+        saveparfor(filestash,tobesaved)
+        
+    end % end if exist filestash
+end % end parfor i=1:N
+end % end function splineOFLIframe
 
-            % Finalize OFLI terms
-            fli2 = (dy+0.5*d2y);
-            ofli2p = fli2 - projection(fli2,flowy);
-            ofli2row(1:length(ntimes)) = log10(sqrt(sum(ofli2p.^2)));
-        end
-        for k=1:T
-            ofli2(i,j,k) = ofli2row(k);
-        end
-    end
-end
+function saveparfor(file,stash)
+    save(file,'stash','v7.3')
 end
