@@ -114,7 +114,12 @@ vz(:) = sqrt(E*2+2*fnval(splinepot,[xs(:)';ys(:)';zeros(size(xs(:)'))]));
 % All ofli results in the plane will be stored in this variable
 ofli2 = zeros(N,N,T);
 
-parfor i=1:N
+% Randomize parfor ordering
+rindex = randperm(N);
+
+parfor iii=1:N
+    
+    i = rindex(iii);
     
     % Declare this slice of the 3D variable:
     oflislice = zeros(N,T);
@@ -199,8 +204,11 @@ parfor i=1:N
         saveparfor(filestash,oflislice)
         
     end % end if exist filestash
-    ofli2(i,:,:) = oflislice;
+    ofli2(iii,:,:) = oflislice;
 end % end parfor i=1:N
+
+ofli2(rindex,:,:) = ofli2(:,:,:);
+
 end % end function splineOFLIframe
 
 function saveparfor(file,stash)
