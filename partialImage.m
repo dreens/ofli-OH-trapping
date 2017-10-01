@@ -1,7 +1,7 @@
 %% Partial Completion
 % Make an OFLI image based on what has been stashed on the data drive of
 % the cluster thus far
-function out = partialImage(N,E,X,trap,P)
+function ofli2 = partialImage(N,E,X,trap,P)
 
 datadir = '//data/ye/dare4983/splines/';
 thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
@@ -17,8 +17,18 @@ for i=1:N
         ofli2(i,:,:) = tmp.stash;
     end
 end
-
-out = broaden(ofli2(:,:,end));
-imtool(out./max(out(:)))
+cut = 10;
+last = broaden(ofli2(:,:,end));
+red = last/20;
+green = last/cut;
+blue = 1-last/cut;
+red(last<cut)=0;
+green( last>cut | last<=0 ) = 0;
+blue(  last>cut | last<=0 ) = 0;
+image = zeros([size(last) 3]);
+image(:,:,1) = red;
+image(:,:,2) = green;
+image(:,:,3) = blue;
+imtool(image)
 
 end
