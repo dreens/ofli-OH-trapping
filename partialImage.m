@@ -19,12 +19,19 @@ for i=1:N
 end
 cut = 10;
 last = broaden(ofli2(:,:,end));
+lost = (last==1);
+last(last==2) = 20;
+last(lost)=0;
 red = last/20;
 green = last/cut;
 blue = 1-last/cut;
 red(last<cut)=0;
 green( last>cut | last<=0 ) = 0;
 blue(  last>cut | last<=0 ) = 0;
+
+red(lost) = 1;
+blue(lost) = 0.5;
+green(lost) = 0.5;
 image = zeros([size(last) 3]);
 image(:,:,1) = red;
 image(:,:,2) = green;
