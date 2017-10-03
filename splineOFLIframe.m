@@ -28,8 +28,8 @@ z = x;
 if strcmp(trap,'xdip')
     u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
     uu = u(xx,yy,zz);
-elseif strcmp(trap,'pin')
-    load('pininterp.mat','uu');
+elseif strcmp(trap,'pinB')
+    load('pininterpB.mat','uu');
 end
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
@@ -41,7 +41,7 @@ datadir = '//data/ye/dare4983/splines/';
 thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
 mkdir(datadir,thisdir);
 
-if ~exist([datadir 'pin.mat'],'file')
+if ~exist([datadir 'pinB.mat'],'file')
     
 
     % Take directional derivatives to get the forces.
@@ -77,7 +77,7 @@ if ~exist([datadir 'pin.mat'],'file')
      fnval(d2az,y(1:3))*y(9)       ) * y(7:9)   ]; 
  
     % Put the spline on the data drive maybe?
-    save([datadir 'pin.mat'],'ff','-v7.3')
+    save([datadir 'pinB.mat'],'ff','-v7.3')
 
 end
 
@@ -139,7 +139,7 @@ parfor iii=1:N
     else
 
         % Now get the spline back out now that we're on a compute node:
-        f = load([datadir 'pin.mat']);
+        f = load([datadir 'pinB.mat']);
 
         % Now define options for the ODE solver. Would have done this outside
         % the parfor, but it needs the spline that we need to separately load
