@@ -16,25 +16,23 @@ T = 20;
 times = logspace(X-2,X,20);
 
 
-% setup the grid to use for defining the spline
-lim = 1;
-dense = 20;
-x = -lim:lim/dense:lim;
-y = x;
-z = x;
-[xx,yy,zz] = ndgrid(x,y,z);
 
 % function giving unitless potential energy
 if strcmp(trap,'xdip')
+    lim = 1;
+    dense = 20;
+    xs = -lim:lim/dense:lim;
+    ys = xs ; zs = xs;
+    [xx,yy,zz] = ndgrid(xs,ys,zs);
     u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
     uu = u(xx,yy,zz);
 elseif strcmp(trap,'pinB')
-    load('pininterpB.mat','uu');
+    load('pininterpB.mat','uu','xs','ys','zs');
 end
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
 o = 5; %order
-splinepot = spapi({o+1,o+1,o+1},{x,x,z},-uu);
+splinepot = spapi({o+1,o+1,o+1},{xs,ys,zs},-uu);
 
 % Let's define some directories
 datadir = '//data/ye/dare4983/splines/';
@@ -56,6 +54,10 @@ if ~exist([datadir 'pinB.mat'],'file')
     % fnval(da,[x;y;z]) = ( da_y/dx  da_y/dy  da_y/dz )
     %                     ( da_z/dx  da_z/dy  da_z/dz )
     da = fnchg(da,'dim',[3 3]); 
+    
+    % This is useful for tuning the sign of da evaluated in the positive
+    % octant:
+    o123 = [1:3;1:3;1:3];
 
     % here I take second derivatives. In principle this is a single tensor, 
     % but I've split it up for simplicity.
@@ -70,11 +72,15 @@ if ~exist([datadir 'pinB.mat'],'file')
     % the coupled differential equation:
     % y' = f(y), dy' = (?f/?y)*dy, d2y = (?f/?y)*d2y+(?^2f/?^2y)ij*dyi*dyj
     ff = @(t,y) ...
-    [y(4:6); fnval(a,y(1:3)); y(10:12); fnval(da,y(1:3))*y(7:9); y(16:18); ...
-     fnval(da,y(1:3))*y(13:15) + ...
-    (fnval(d2ax,y(1:3))*y(7) + ...
-     fnval(d2ay,y(1:3))*y(8) + ...
-     fnval(d2az,y(1:3))*y(9)       ) * y(7:9)   ]; 
+    [y(4:6); ...
+    fnval(a,abs(y(1:3))).*sign(y(1:3)); ...
+    y(10:12); ...
+    fnval(da,abs(y(1:3))).*sign(y(o123)).*sign(y(o123'))*y(7:9); ...
+    y(16:18); ...
+     fnval(da,abs(y(1:3))).*sign(y(o123)).*sign(y(o123'))*y(13:15) + ...
+    (fnval(d2ax,abs(y(1:3)))*sign(y(1)).*sign(y(o123)).*sign(y(o123'))*y(7) + ...
+     fnval(d2ay,abs(y(1:3)))*sign(y(2)).*sign(y(o123)).*sign(y(o123'))*y(8) + ...
+     fnval(d2az,abs(y(1:3)))*sign(y(3)).*sign(y(o123)).*sign(y(o123'))*y(9)       ) * y(7:9)   ]; 
  
     % Put the spline on the data drive maybe?
     save([datadir 'pinB.mat'],'ff','-v7.3')
