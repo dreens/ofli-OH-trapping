@@ -9,7 +9,7 @@
 % X = exponent of time to run to. 3 is ideal, but slow.
 % trap = "xdip" for crossed dipole or "pin" for pintrap.
 % Assumes X=0, Y=0 mirror symmetry.
-function ofli2 = splineOFLIframe(N,E,X,trap,P)
+function ofli2 = splineOFLIframe(N,E,X,trap,P,plane)
 
 % lets collect info for a few different integration times:
 T = 20;
@@ -36,7 +36,7 @@ splinepot = spapi({o+1,o+1,o+1},{xs,ys,zs},-uu);
 
 % Let's define some directories
 datadir = '//data/ye/dare4983/splines/';
-thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
+thisdir = sprintf('N%d_E%.1f_X%d_%s_P%d_%s',N,E,X,trap,P,plane);
 mkdir(datadir,thisdir);
 
 if ~exist([datadir 'pinB.mat'],'file')
@@ -91,13 +91,35 @@ end
 % velocity orthogonal to the plane. All have their velocity chosen
 % according to their initial potential energy so that total energy is the
 % same.
-x = linspace(0,1,N);
-y = linspace(0,1,N);
-[xs, ys] = meshgrid(x,y);
-vz = zeros(size(xs));
-vz(:) = sqrt(E*2+2*fnval(splinepot,[xs(:)';ys(:)';zeros(size(xs(:)'))]));
-
-
+switch(plane)
+    case 'xy'
+        n1 = 3; n2 = 1;
+        a = linspace(0,n1,n1*N);
+        b = linspace(0,n2,n2*N);
+        [as, bs] = meshgrid(a,b);
+        vz = zeros(size(as));
+        cs = vz;
+        vz(:) = sqrt(E*2+2*fnval(splinepot,[as(:)';bs(:)';cs(:)']));
+    case 'yz'
+        n1 = 1; n2 = 2;
+        a = linspace(0,n1,n1*N);
+        b = linspace(0,n2,n2*N);
+        [as, bs] = meshgrid(a,b);
+        vz = zeros(size(as));
+        cs = vz;
+        vz(:) = sqrt(E*2+2*fnval(splinepot,[cs(:)';as(:)';bs(:)']));
+    case 'xz'
+        n1 = 3; n2 = 2;
+        a = linspace(0,n1,n1*N);
+        b = linspace(0,n2,n2*N);
+        [as, bs] = meshgrid(a,b);
+        vz = zeros(size(as));
+        cs = vz;
+        vz(:) = sqrt(E*2+2*fnval(splinepot,[as(:)';cs(:)';bs(:)']));
+    otherwise
+        error('splineOFLI:input',...
+       'Plane input must be among the following:\n xy\n yz\n xz\n.')
+end
 % This function checks for escaping the trap, and is registered as an
 % "event" indicating termination by the ode solver.
 % function [vals, terms, dirs] = escbase(~,y,fff) 
@@ -118,17 +140,18 @@ vz(:) = sqrt(E*2+2*fnval(splinepot,[xs(:)';ys(:)';zeros(size(xs(:)'))]));
 % end
 
 % All ofli results in the plane will be stored in this variable
-ofli2 = zeros(N,N,T);
+N1 = n1*N; N2 = n2*N;
+ofli2 = zeros(N1,N2,T);
 
 % Randomize parfor ordering
-rindex = randperm(N);
+rindex = randperm(N1);
 
-parfor iii=1:N
+parfor iii=1:N1
     
     i = rindex(iii);
     
     % Declare this slice of the 3D variable:
-    oflislice = zeros(N,T);
+    oflislice = zeros(N1,T);
 
     
     % Look to see if this step in the parfar loop has been completed by a
@@ -137,7 +160,7 @@ parfor iii=1:N
     filestash = [datadir thisdir '/i=' num2str(i) '.mat'];
     if exist(filestash,'file')
         d = load(filestash);
-        for j=1:N
+        for j=1:N2
             for k=1:T
                 oflislice(j,k) = d.stash(j,k);
             end
@@ -154,7 +177,7 @@ parfor iii=1:N
         options = odeset('RelTol',10^-P,'AbsTol',10^-P,'Events',escape);
         
         fprintf('%d\n',i)
-        for j=1:N
+        for j=1:N2
             % Given the specified energy, some startpoints will be out of
             % reach. We can tell if vz is imaginary:
             ofli2row = zeros(1,T);

@@ -4,7 +4,8 @@
 function ofli2 = partialImage(N,E,X,trap,P)
 
 datadir = '//data/ye/dare4983/splines/';
-thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
+%thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
+thisdir = sprintf('N%d_E%.1f_X%d_%s_P%d_%s',N,E,X,trap,P,plane);
 
 assert(~~exist([datadir thisdir],'dir'),'No partial data found for those parameters');
 
