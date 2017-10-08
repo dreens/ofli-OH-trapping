@@ -41,3 +41,18 @@ Plan of action regarding the above:
 
 # update 8/16/17
 I've achieved all of the above except the different plane. Running a dense grid at E=-0.9 and E=-0.8
+
+# update 10/7/17
+So the big news… waited forever for the previous things to finish. Finally realized that part of why they were slow was that parfor preallocates and doesn’t redistribute if something finishes first. Addressed this by randomizing the index sent to parfor.
+
+Also implemented intermediate saving of rows of data, which also enables the code to be run on multiple nodes, since they check for a saved version of the row before computing it. Used this to crank through data at E=-0.9 through 0.6.
+
+Noticed that the molecules were all flying out of the trap by -0.6, so revisited the definition of the energy spline. Set E=0 to the trap depth. Before E=-0.7 was the trap depth.
+
+Simultaneously improved the spline by re-exporting the fields from COMSOL with a higher mesh density in the relevant region.
+
+Also added plane capability, although so far I’ve only tested it in the original plane.
+
+CONFIRMED that doing 1e-6 precision on the ODE stepper gives no noticeable change relative to 1e-9 precision. Compare watchprogress to watchprogress6.
+
+Changed the saving to happen for each pixel. This improves computation time especially near the end since a single core doesn’t end up stuck plowing through the most difficult row. Also reduces the overlap when running the same job on many cores. Downside is that the directory on the data drive gets loaded up with files, but who cares? Just don’t try to open it in a GUI.
