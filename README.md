@@ -56,3 +56,6 @@ Also added plane capability, although so far I’ve only tested it in the origin
 CONFIRMED that doing 1e-6 precision on the ODE stepper gives no noticeable change relative to 1e-9 precision. Compare watchprogress to watchprogress6.
 
 Changed the saving to happen for each pixel. This improves computation time especially near the end since a single core doesn’t end up stuck plowing through the most difficult row. Also reduces the overlap when running the same job on many cores. Downside is that the directory on the data drive gets loaded up with files, but who cares? Just don’t try to open it in a GUI.
+
+# update 10/8/17
+Analyzed point by point frame. Shows green on axes… normally the axes are points of stability because of the reduced dimensionality presumably. I’m nervous it changed because of the recent change to a single octant spline with numerous “signs” and “abs” to handle the change. To ensure this isn’t hampering the results, I need to setup a side-by-side with and without single octant splining.
