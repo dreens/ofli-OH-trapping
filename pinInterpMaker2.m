@@ -2,9 +2,9 @@
 %
 % Prepare a matrix for splining the pin trap potential.
 f = importdata('Broad322DynamicsEnergyt.dat',' ',9);
-x = f.data(:,1)*1e-3;
-y = f.data(:,2)*1e-3;
-z = f.data(:,3)*1e-3;
+x = f.data(:,1);
+y = f.data(:,2);
+z = f.data(:,3);
 u = f.data(:,4);
 
 xs = sort(uniquetol(x,1e-6,'DataScale',1));
@@ -45,6 +45,6 @@ uu(locs) = u;
 
 %uu = interpn(xx,yy,zz,vv,xxx,yyy,zzz);
 uu = uu - min(uu(:));
-uu = uu./(10e9*6.626e-34)-1;
+uu = uu/10-1;
 
 save('pininterpB.mat','uu','xs','ys','zs')

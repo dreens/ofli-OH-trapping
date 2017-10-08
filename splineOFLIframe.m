@@ -26,8 +26,10 @@ if strcmp(trap,'xdip')
     [xx,yy,zz] = ndgrid(xs,ys,zs);
     u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
     uu = u(xx,yy,zz);
-elseif strcmp(trap,'pinB')
+elseif strcmp(trap,'pin')
     load('pininterpB.mat','uu','xs','ys','zs');
+else
+    error('splineOFLI:input','Trap type ''%s'' not recognized.',trap)
 end
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
@@ -95,27 +97,39 @@ switch(plane)
     case 'xy'
         n1 = 3; n2 = 1;
         a = linspace(0,n1,n1*N);
+        va = sqrt(2*E+2*fnval(splinepot,[a;zeros(2,length(a))]));
+        a = a(~imag(va));
         b = linspace(0,n2,n2*N);
-        [as, bs] = meshgrid(a,b);
-        vz = zeros(size(as));
-        cs = vz;
-        vz(:) = sqrt(E*2+2*fnval(splinepot,[as(:)';bs(:)';cs(:)']));
+        vb = sqrt(2*E+2*fnval(splinepot,[zeros(size(b));b;zeros(size(b))]));
+        b = b(~imag(vb));
+        [as, bs] = ndgrid(a,b);
+        vc = zeros(size(as));
+        cs = vc;
+        vc(:) = sqrt(E*2+2*fnval(splinepot,[as(:)';bs(:)';cs(:)']));
     case 'yz'
         n1 = 1; n2 = 2;
         a = linspace(0,n1,n1*N);
+        va = sqrt(2*E+2*fnval(splinepot,[zeros(size(a));a;zeros(size(a))]));
+        a = a(~imag(va));
         b = linspace(0,n2,n2*N);
-        [as, bs] = meshgrid(a,b);
-        vz = zeros(size(as));
-        cs = vz;
-        vz(:) = sqrt(E*2+2*fnval(splinepot,[cs(:)';as(:)';bs(:)']));
+        vb = sqrt(2*E+2*fnval(splinepot,[zeros(2,length(b));b]));
+        b = b(~imag(vb));
+        [as, bs] = ndgrid(a,b);
+        vc = zeros(size(as));
+        cs = vc;
+        vc(:) = sqrt(E*2+2*fnval(splinepot,[cs(:)';as(:)';bs(:)']));
     case 'xz'
         n1 = 3; n2 = 2;
         a = linspace(0,n1,n1*N);
+        va = sqrt(2*E+2*fnval(splinepot,[a;zeros(2,length(a))]));
+        a = a(~imag(va));
         b = linspace(0,n2,n2*N);
-        [as, bs] = meshgrid(a,b);
-        vz = zeros(size(as));
-        cs = vz;
-        vz(:) = sqrt(E*2+2*fnval(splinepot,[as(:)';cs(:)';bs(:)']));
+        vb = sqrt(2*E+2*fnval(splinepot,[zeros(2,length(b));b]));
+        b = b(~imag(vb));
+        [as, bs] = ndgrid(a,b);
+        vc = zeros(size(as));
+        cs = vc;
+        vc(:) = sqrt(E*2+2*fnval(splinepot,[as(:)';cs(:)';bs(:)']));
     otherwise
         error('splineOFLI:input',...
        'Plane input must be among the following:\n xy\n yz\n xz\n.')
@@ -140,7 +154,7 @@ end
 % end
 
 % All ofli results in the plane will be stored in this variable
-N1 = n1*N; N2 = n2*N;
+N1 = length(a); N2 = length(b);
 ofli2 = zeros(N1,N2,T);
 
 % Randomize parfor ordering
@@ -179,13 +193,20 @@ parfor iii=1:N1
         fprintf('%d\n',i)
         for j=1:N2
             % Given the specified energy, some startpoints will be out of
-            % reach. We can tell if vz is imaginary:
+            % reach. We can tell if vc is imaginary:
             ofli2row = zeros(1,T);
-            if ~isreal(vz(i,j))
+            if ~isreal(vc(i,j))
                 ofli2row = ofli2row - 1;
             else
                 % Initialize the ODE solver
-                y0 = [xs(i,j) ys(i,j) 0 0 0 vz(i,j)];
+                switch(plane)
+                    case 'xy'
+                        y0 = [as(i,j) bs(i,j) 0 0 0 vc(i,j)];
+                    case 'yz'
+                        y0 = [0 as(i,j) bs(i,j) vc(i,j) 0 0];
+                    case 'xz'
+                        y0 = [as(i,j) 0 bs(i,j) 0 vc(i,j) 0];
+                end
                 dy0 = f.ff(0,[y0 zeros(1,12)]');
                 dy0 = dy0(1:6);
                 dy0 = dy0'/sqrt(sum(dy0.^2));
@@ -193,7 +214,7 @@ parfor iii=1:N1
                 % Solve the ODE
                 sol = ode45(f.ff,times,[y0 dy0 zeros(1,6)],options);
 
-                % Check for erors
+                % Check for errors
                 if ~isempty(sol.ie)
                     ofli2row = ofli2row + sol.ie;
                 end

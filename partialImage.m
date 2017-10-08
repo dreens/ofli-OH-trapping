@@ -1,23 +1,30 @@
 %% Partial Completion
 % Make an OFLI image based on what has been stashed on the data drive of
 % the cluster thus far
-function ofli2 = partialImage(N,E,X,trap,P)
+function ofli2 = partialImage(N,E,X,trap,P,varargin)
 
 datadir = '//data/ye/dare4983/splines/';
-%thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
-thisdir = sprintf('N%d_E%.1f_X%d_%s_P%d_%s',N,E,X,trap,P,plane);
-
+if isempty(varargin)
+    thisdir = sprintf('N%d_E%d_X%d_%s_P%d',N,E,X,trap,P);
+else
+    thisdir = sprintf('N%d_E%.1f_X%d_%s_P%d_%s',N,E,X,trap,P,varargin{1});
+end
 assert(~~exist([datadir thisdir],'dir'),'No partial data found for those parameters');
 
-ofli2 = zeros(N,N,20);
-
-for i=1:N
+ofli2 = zeros(3*N,N,20);
+maxi = 1;
+for i=1:3*N
     dir2file = [datadir thisdir '/i=' num2str(i) '.mat'];
     if exist(dir2file,'file')
         tmp = load(dir2file);
+        if N~=size(tmp.stash,1)
+            ofli2 = zeros(3*N,size(tmp.stash,1),20);
+        end
         ofli2(i,:,:) = tmp.stash;
+        maxi = i;
     end
 end
+ofli2 = ofli2(1:maxi,:,:);
 cut = 10;
 last = broaden(ofli2(:,:,end));
 lost = (last==1);
