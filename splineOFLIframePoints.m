@@ -156,14 +156,14 @@ end
 % All ofli results in the plane will be stored in this variable
 N1 = length(a); N2 = length(b); NT = N1*N2;
 ofli2 = zeros(NT,T);
-save('dims.mat','N1','N2');
+save([datadir thisdir '/dims.mat'],'N1','N2');
 
 % Randomize parfor ordering
 rindex = randperm(NT);
 
-vcp = vc; vcp(rindex) = vc(:);
-asp = as; asp(rindex) = as(:);
-bsp = bs; bsp(rindex) = bs(:);
+vcp = vc; vcp(:) = vc(rindex);
+asp = as; asp(:) = as(rindex);
+bsp = bs; bsp(:) = bs(rindex);
 
 parfor iii=1:NT
     

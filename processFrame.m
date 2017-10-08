@@ -12,7 +12,7 @@ for i=1:20
 end
 
 %% Write a Video
-a = VideoWriter('watchprogress.avi');
+a = VideoWriter('watchprogress6.avi');
 a.FrameRate = 1;
 open(a);
 writeVideo(a,h(:,:,:,8:end));
