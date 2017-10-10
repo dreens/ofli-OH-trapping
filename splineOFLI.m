@@ -16,68 +16,70 @@ function out = splineOFLI(E,X,trap)
 
 %% First we start with crossed dipole potential for comparison
 %
-
-lim = 1;
-dense = 20;
-x = -lim:lim/dense:lim;
-y = x;
-z = x;
-[xx,yy,zz] = ndgrid(x,y,z);
-
-
 if strcmp(trap,'xdip')
+    lim = 1;
+    dense = 20;
+    xs = -lim:lim/dense:lim;
+    ys = xs ; zs = xs;
+    [xx,yy,zz] = ndgrid(xs,ys,zs);
     u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
     uu = u(xx,yy,zz);
 elseif strcmp(trap,'pin')
-    load('pininterp.mat','uu');
+    load('pininterpB.mat','uu','xs','ys','zs');
+else
+    error('splineOFLI:input','Trap type ''%s'' not recognized.',trap)
 end
-
-
-% see what it looks like:
-% figure; fnplt(uu);
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
 o = 5; %order
-splinepot = spapi({o+1,o+1,o+1},{x,x,z},-uu);
+splinepot = spapi({o+1,o+1,o+1},{xs,ys,zs},-uu);
 
-% Take directional derivatives to get the forces.
-% a is a three valued spline; a = (ax ay az).
-a = fndir(splinepot,eye(3));
+if ~exist('pintemp.mat','file')
 
-% % Setup an ODE and solve it.
-% f = @(t,y) [y(4); y(5); y(6); fnval(a,y(1:3))] ;
-% t = linspace(0,10,100);
-% y0 = [0 0 0 0 0 1.2];
-% options = odeset('RelTol',2e-9,'AbsTol',2e-10);
-% ode45(f,t,y0,options);
+    % Take directional derivatives to get the forces.
+    % a is a three valued spline; a = (ax ay az).
+    a = fndir(splinepot,eye(3));
 
-% These will be used for the "df/dy" term:
-da = fndir(a,eye(3));
+    % These will be used for the "df/dy" term:
+    da = fndir(a,eye(3));
 
-% make da output 3x3 matrices instead of 9x1 vector. Here is it's output:
-%                     ( da_x/dx  da_x/dy  da_x/dz )
-% fnval(da,[x;y;z]) = ( da_y/dx  da_y/dy  da_y/dz )
-%                     ( da_z/dx  da_z/dy  da_z/dz )
-da = fnchg(da,'dim',[3 3]); 
+    % make da output 3x3 matrices instead of 9x1 vector. Here is it's output:
+    %                     ( da_x/dx  da_x/dy  da_x/dz )
+    % fnval(da,[x;y;z]) = ( da_y/dx  da_y/dy  da_y/dz )
+    %                     ( da_z/dx  da_z/dy  da_z/dz )
+    da = fnchg(da,'dim',[3 3]); 
 
-% here I take second derivatives. In principle this is a single tensor, 
-% but I've split it up for simplicity.
-d2ax = fnchg(fndir(da,[1;0;0]),'dim',[3 3]);
-d2ay = fnchg(fndir(da,[0;1;0]),'dim',[3 3]);
-d2az = fnchg(fndir(da,[0;0;1]),'dim',[3 3]);
+    % This is useful for tuning the sign of da evaluated in the positive
+    % octant:
+    o123 = [1:3;1:3;1:3];
 
-% here is the actual ODE stepping function. The variables are ordered in
-% one giant length 18 column vector: 
-% [x y z vx vy vz dx dy dz dvx dvy dvz d2x d2y d2z d2vx d2vy d2vz]'
-% This function gives what the derivative should be for each of these in
-% the coupled differential equation:
-% y' = f(y), dy' = (?f/?y)*dy, d2y = (?f/?y)*d2y+(?^2f/?^2y)ij*dyi*dyj
-f = @(t,y) ...
-[y(4:6); fnval(a,y(1:3)); y(10:12); fnval(da,y(1:3))*y(7:9); y(16:18); ...
- fnval(da,y(1:3))*y(13:15) + ...
-(fnval(d2ax,y(1:3))*y(7) + ...
- fnval(d2ay,y(1:3))*y(8) + ...
- fnval(d2az,y(1:3))*y(9)       ) * y(7:9)   ]; 
+    % here I take second derivatives. In principle this is a single tensor, 
+    % but I've split it up for simplicity.
+    d2ax = fnchg(fndir(da,[1;0;0]),'dim',[3 3]);
+    d2ay = fnchg(fndir(da,[0;1;0]),'dim',[3 3]);
+    d2az = fnchg(fndir(da,[0;0;1]),'dim',[3 3]);
+
+    % here is the actual ODE stepping function. The variables are ordered in
+    % one giant length 18 column vector: 
+    % [x y z vx vy vz dx dy dz dvx dvy dvz d2x d2y d2z d2vx d2vy d2vz]'
+    % This function gives what the derivative should be for each of these in
+    % the coupled differential equation:
+    % y' = f(y), dy' = (?f/?y)*dy, d2y = (?f/?y)*d2y+(?^2f/?^2y)ij*dyi*dyj
+    f = @(t,y) ...
+    [y(4:6); ...
+    fnval(a,abs(y(1:3))).*sign(y(1:3)); ...
+    y(10:12); ...
+    fnval(da,abs(y(1:3))).*sign(y(o123)).*sign(y(o123'))*y(7:9); ...
+    y(16:18); ...
+     fnval(da,abs(y(1:3))).*sign(y(o123)).*sign(y(o123'))*y(13:15) + ...
+    (fnval(d2ax,abs(y(1:3)))*sign(y(1)).*sign(y(o123)).*sign(y(o123'))*y(7) + ...
+     fnval(d2ay,abs(y(1:3)))*sign(y(2)).*sign(y(o123)).*sign(y(o123'))*y(8) + ...
+     fnval(d2az,abs(y(1:3)))*sign(y(3)).*sign(y(o123)).*sign(y(o123'))*y(9)       ) * y(7:9)   ]; 
+
+    save('pintemp.mat','f','-v7.3')
+else
+    load('pintemp.mat','f')
+end
 
 %% 
 % Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
@@ -100,7 +102,7 @@ d2y0 = zeros(1,6);
 % Output function trajectories only
 function stop = trimplot(t,y,flag,varargin)
     if size(y,1)>=6
-        stop = odeplot(t,y(13:18,:),flag,varargin);
+        stop = odeplot(t,y(1:3,:),flag,varargin);
     else
         stop = false;
     end
@@ -120,7 +122,7 @@ function stop = oflilive(t,y,flag,varargin)
         fl = (y2+0.5*y3);
         pj = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
         ofl = fl - pj(fl,fy);
-        ofl = sqrt(sum(ofl.^2));
+        ofl = log10(sqrt(sum(ofl.^2)));
 
         stop = odeplot(t,ofl,flag,varargin);
     else
@@ -137,7 +139,7 @@ function [vals, terms, dirs] = escape(~,y)
     fl = (y2+0.5*y3);
     pj = @(a,b) repmat(sum(a.*b)./sum(b.^2),size(a,1),1).*b;
     ofl = fl - pj(fl,fy);
-    ofl = sqrt(sum(ofl.^2));
+    ofl = log10(sqrt(sum(ofl.^2)));
     
     val1 = max(abs(y(1:6)))-10;
     val2 = ofl-10^1;
@@ -147,8 +149,8 @@ function [vals, terms, dirs] = escape(~,y)
 end
 
 % Solve the ODE and keep track of how long it takes.
-options = odeset('RelTol',2e-8,'AbsTol',2e-8,'OutputFcn',@oflilive,'Events',@escape);
-sol = ode45(f,[0 10 50 100],[y0 dy0 d2y0],options);
+options = odeset('RelTol',1e-6,'AbsTol',1e-6,'OutputFcn',@oflilive,'Events',@escape);
+sol = ode45(f,0:0.01:10,[y0 dy0 d2y0],options);
 
 % Check for escape
 if sol.x(end)<10^X
