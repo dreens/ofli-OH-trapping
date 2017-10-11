@@ -87,6 +87,10 @@ if ~exist([datadir 'pinB.mat'],'file')
     % Put the spline on the data drive maybe?
     save([datadir 'pinB.mat'],'ff','-v7.3')
 
+else
+    
+    load([datadir 'pinB.mat'],'ff')
+    
 end
 
 % Setup plane of trajectories to investigate. All begin in x-y plane with
@@ -185,12 +189,12 @@ parfor iii=1:NT
     else
 
         % Now get the spline back out now that we're on a compute node:
-        f = load([datadir 'pinB.mat']);
+        % f = load([datadir 'pinB.mat']);
 
         % Now define options for the ODE solver. Would have done this outside
         % the parfor, but it needs the spline that we need to separately load
         % on the compute nodes to reduce information transfer.
-        escape = @(t,y) escbase(t,y,f.ff);
+        escape = @(t,y) escbase(t,y,ff);
         options = odeset('RelTol',10^-P,'AbsTol',10^-P,'Events',escape);
         
         % Given the specified energy, some startpoints will be out of
@@ -208,12 +212,12 @@ parfor iii=1:NT
                 case 'xz'
                     y0 = [asp(iii) 0 bsp(iii) 0 vcp(iii) 0];
             end
-            dy0 = f.ff(0,[y0 zeros(1,12)]');
+            dy0 = ff(0,[y0 zeros(1,12)]');
             dy0 = dy0(1:6);
             dy0 = dy0'/sqrt(sum(dy0.^2));
 
             % Solve the ODE
-            sol = ode45(f.ff,times,[y0 dy0 zeros(1,6)],options);
+            sol = ode45(ff,times,[y0 dy0 zeros(1,6)],options);
 
             % Check for errors
             if ~isempty(sol.ie)
@@ -230,7 +234,7 @@ parfor iii=1:NT
             % Get flows for OFLI calculation
             flowy = y;
             for l=1:length(ntimes)
-                temp = f.ff(0,yall(:,l));
+                temp = ff(0,yall(:,l));
                 flowy(1:6,l) = temp(1:6);
             end
 
