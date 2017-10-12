@@ -1,0 +1,4 @@
+#!/bin/bash
+cd ~/Documents/MATLAB/AnalyticTraps/
+matlab -nodisplay -nodesktop -singleCompThread -r “try partialImage(1001,-0.5,2,’pin’,6,’xy’);catch;end;quit”
+mail -s "Progress Update" -a //data/ye/dare4983/splines/N1001_E-0.5_X2_pin_P6_xy/panel.png dave.reens@gmail.com <<< “Your friendly progress update from JILIAC”
