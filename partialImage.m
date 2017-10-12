@@ -63,6 +63,10 @@ image = zeros([size(last) 3]);
 image(:,:,1) = red;
 image(:,:,2) = green;
 image(:,:,3) = blue;
-imtool(image)
+if usejava('jvm')
+    imtool(image)
+end
+
+imwrite(image,[datadir thisdir '/panel.png'])
 
 end
