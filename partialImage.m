@@ -44,8 +44,8 @@ else
     ofli2 = ofli2(1:maxi,:,:);
 end
 
-cut = 10;
-last = broaden(ofli2(:,:,end));
+cut = 15;
+last = broaden(r(:,:,end));
 lost = (last==1);
 last(last==2) = 20;
 last(lost)=0;

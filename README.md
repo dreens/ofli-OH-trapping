@@ -59,3 +59,6 @@ Changed the saving to happen for each pixel. This improves computation time espe
 
 # update 10/8/17
 Analyzed point by point frame. Shows green on axes… normally the axes are points of stability because of the reduced dimensionality presumably. I’m nervous it changed because of the recent change to a single octant spline with numerous “signs” and “abs” to handle the change. To ensure this isn’t hampering the results, I need to setup a side-by-side with and without single octant splining.
+
+# update 10/21/17
+I didn't find any blips in the ODE solver associated with the absolute values. Assuming it was working, I let it finish. Took a lot of cores a lot of work. The results suggest that more run time is needed. Its time to investigate a way to reduce the computation time further. In the meantime, I've added a figure file, octant_results_100.fig, and a video watch0p5.avi.
