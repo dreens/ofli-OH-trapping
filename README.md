@@ -62,3 +62,6 @@ Analyzed point by point frame. Shows green on axes… normally the axes are poin
 
 # update 10/21/17
 I didn't find any blips in the ODE solver associated with the absolute values. Assuming it was working, I let it finish. Took a lot of cores a lot of work. The results suggest that more run time is needed. Its time to investigate a way to reduce the computation time further. In the meantime, I've added a figure file, octant_results_100.fig, and a video watch0p5.avi.
+
+# update 10/23/17
+By watching the ODE progress for a single trace with splineOFLI.m, I find that it is taking significant pauses at each zero crossing. How significant? I'd need to try running without the single octant spline to know I think. I haven't found as much effect as I would like from reducing the spline size or spline order. It seems like removing the derivative discontinuities at the octant boundaries may be the best speedup. That or further lowering the precision requirements, but I'm hesitant to do that. Not sure what to do next...

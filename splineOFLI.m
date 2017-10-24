@@ -31,8 +31,10 @@ else
 end
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
-o = 5; %order
-splinepot = spapi({o+1,o+1,o+1},{xs,ys,zs},-uu);
+o = 4; %order
+sk = @(x) x(1:2:end,1:2:end,1:2:end);
+%sk = @(x) x;
+splinepot = spapi({o+1,o+1,o+1},{sk(xs),sk(ys),sk(zs)},-sk(uu));
 
 if ~exist('pintemp.mat','file')
 
