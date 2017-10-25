@@ -65,3 +65,6 @@ I didn't find any blips in the ODE solver associated with the absolute values. A
 
 # update 10/23/17
 By watching the ODE progress for a single trace with splineOFLI.m, I find that it is taking significant pauses at each zero crossing. How significant? I'd need to try running without the single octant spline to know I think. I haven't found as much effect as I would like from reducing the spline size or spline order. It seems like removing the derivative discontinuities at the octant boundaries may be the best speedup. That or further lowering the precision requirements, but I'm hesitant to do that. Not sure what to do next...
+
+# update 10/24/17
+I think I can get away with 1e-5 tolerances. I tried 1e-4 but there seemed to be energy loss. At 1e-5 this isn't happening. The runtime seems to get very long as the ofli gets above the 10^10 regime, in the testcase I performed this was happening after t=300 or so. Maybe the thing to do is to make t=500 or 1000, but cut off evaluation when ofli hits 10^10?

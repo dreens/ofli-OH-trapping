@@ -85,7 +85,7 @@ end
 
 %% 
 % Now I try to repeat figure 3 of "nonlinear dynamics of atoms in a crossed
-% optical dipole trap" González-Férez et al, PRE 2014.
+% optical dipole trap" Gonzï¿½lez-Fï¿½rez et al, PRE 2014.
 % Get vz with total energy -0.6:
 xi = 100e-3; yi = 100e-3; zi = 0;
 vz = sqrt(E*2+2*fnval(splinepot,[xi; yi; 0]));
@@ -144,15 +144,16 @@ function [vals, terms, dirs] = escape(~,y)
     ofl = log10(sqrt(sum(ofl.^2)));
     
     val1 = max(abs(y(1:6)))-10;
-    val2 = ofl-10^1;
+    val2 = ofl-20;
     vals = [val1 val2];
     terms = [1 1];
     dirs = [0 0];
 end
 
 % Solve the ODE and keep track of how long it takes.
-options = odeset('RelTol',1e-6,'AbsTol',1e-6,'OutputFcn',@oflilive,'Events',@escape);
-sol = ode45(f,0:0.01:10,[y0 dy0 d2y0],options);
+figure;
+options = odeset('RelTol',1e-5,'AbsTol',1e-5,'OutputFcn',@trimplot,'Events',@escape);
+sol = ode113(f,0:0.01:1000,[y0 dy0 d2y0],options);
 
 % Check for escape
 if sol.x(end)<10^X
@@ -179,7 +180,7 @@ else
     ofli2p = fli2 - projection(fli2,flowy);
     ofli2n = sqrt(sum(ofli2p.^2));
 
-
+    figure; plot(sol.x,log10(ofli2n))
     out = sol;
 end
 
