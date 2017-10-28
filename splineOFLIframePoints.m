@@ -12,8 +12,8 @@
 function ofli2 = splineOFLIframePoints(N,E,X,trap,P,plane)
 
 % lets collect info for a few different integration times:
-T = 20;
-times = logspace(X-2,X,20);
+T = 200;
+times = linspace(0,10^X,T);
 
 
 
@@ -33,15 +33,21 @@ else
 end
 
 %potential spline. It's inverted in advance: ?(-u)/?x = +f
-o = 5; %order
-splinepot = spapi({o+1,o+1,o+1},{xs,ys,zs},-uu);
+o = 4; %order
+%sk = @(x) x;
+sk = @(x) x(1:2:end,1:2:end,1:2:end);
+splinepot = spapi({o+1,o+1,o+1},{sk(xs),sk(ys),sk(zs)},-sk(uu));
 
 % Let's define some directories
 datadir = '//data/ye/dare4983/splines/';
 thisdir = sprintf('N%d_E%.1f_X%d_%s_P%d_%s',N,E,X,trap,P,plane);
 mkdir(datadir,thisdir);
+for mi=0:999
+    mkdir([datadir thisdir],num2str(mi))
+end
 
-if ~exist([datadir 'pinB.mat'],'file')
+
+if ~exist([datadir 'pinC.mat'],'file')
     
 
     % Take directional derivatives to get the forces.
@@ -85,11 +91,11 @@ if ~exist([datadir 'pinB.mat'],'file')
      fnval(d2az,abs(y(1:3)))*sign(y(3)).*sign(y(o123)).*sign(y(o123'))*y(9)       ) * y(7:9)   ]; 
  
     % Put the spline on the data drive maybe?
-    save([datadir 'pinB.mat'],'ff','-v7.3')
+    save([datadir 'pinC.mat'],'ff','-v7.3')
 
 else
     
-    load([datadir 'pinB.mat'],'ff')
+    load([datadir 'pinC.mat'],'ff')
     
 end
 
@@ -180,7 +186,7 @@ parfor iii=1:NT
     % Look to see if this step in the parfar loop has been completed by a
     % previously attempted job submission. If so, get the results and reuse
     % them directly.
-    filestash = [datadir thisdir '/i=' num2str(i) '.mat'];
+    filestash = [datadir thisdir '/' num2str(mod(i,1000)) '/i=' num2str(i) '.mat'];
     if exist(filestash,'file')
         d = load(filestash);
         for k=1:T
@@ -217,7 +223,7 @@ parfor iii=1:NT
             dy0 = dy0'/sqrt(sum(dy0.^2));
 
             % Solve the ODE
-            sol = ode45(ff,times,[y0 dy0 zeros(1,6)],options);
+            sol = ode113(ff,times,[y0 dy0 zeros(1,6)],options);
 
             % Check for errors
             if ~isempty(sol.ie)
