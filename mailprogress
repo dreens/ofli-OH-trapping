@@ -1,4 +1,5 @@
 #!/bin/bash
 cd ~/Documents/MATLAB/AnalyticTraps/
+module load matlab
 matlab -nodisplay -nodesktop -singleCompThread -r "try partialImage(1001,-0.5,3,'pin',5,'xy');catch;end;quit"
-mail -s "Progress Update" -a //data/ye/dare4983/splines/N1001_E-0.5_X3_pin_P5_xy/panel.png dave.reens@gmail.com <<< "Your friendly progress update from JILIAC"
+mail -s "Progress Update" -a //data/ye/dare4983/splines/N1001_E-0.5_X3_pin_P5_xy/panel.png dave.reens@gmail.com <<< "Your friendly progress update from TERRA"
