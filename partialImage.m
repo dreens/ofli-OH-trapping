@@ -15,18 +15,27 @@ assert(~~exist([datadir thisdir],'dir'),'No partial data found for those paramet
 
 % Two cases depending on whether point by point parfor had been implemented
 % yet or not.
-dimfile = [datadir thisdir '/dims.mat'];
+ds = dir([datadir thisdir '/dim*']);
+dimfile = [datadir thisdir '/' ds(1).name];
 if exist(dimfile,'file')
     load(dimfile,'N1','N2');
-    ofli2 = zeros(N1*N2,20);
+    fprintf('Image is %dx%d\n',N1,N2);
+    ofli2 = zeros(N1*N2,200);
+    fprintf('Getting Data from Files... %2d%%',0)
+    count = 0;
     for i=1:N1*N2
-        dir2file = [datadir thisdir '/i=' num2str(i) '.mat'];
+        if ~mod(i,1000)
+            fprintf('\b\b\b%2d%%',round(100*i/(N1*N2)))
+        end
+        dir2file = [datadir thisdir '/' num2str(mod(i,1000)) '/i=' num2str(i) '.mat'];
         if exist(dir2file,'file')
+            count = count + 1;
             tmp = load(dir2file);
             ofli2(i,:) = tmp.stash;
         end
     end
-    ofli2 = reshape(ofli2,[N1 N2 20]);
+    fprintf('\nPixel Progress:%d/%d=%2d%%\n',count,N1*N2,round(100*count/N1/N2));
+    ofli2 = reshape(ofli2,[N1 N2 200]);
 else
     ofli2 = zeros(3*N,N,20);
     maxi = 1;
@@ -45,7 +54,7 @@ else
 end
 
 cut = 15;
-last = broaden(r(:,:,end));
+last = broaden(ofli2(:,:,end));
 lost = (last==1);
 last(last==2) = 20;
 last(lost)=0;
@@ -63,7 +72,7 @@ image = zeros([size(last) 3]);
 image(:,:,1) = red;
 image(:,:,2) = green;
 image(:,:,3) = blue;
-if usejava('jvm')
+if usejava('awt')
     imtool(image)
 end
 
