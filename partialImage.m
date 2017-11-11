@@ -34,7 +34,8 @@ if exist(dimfile,'file')
             ofli2(i,:) = tmp.stash;
         end
     end
-    fprintf('\nPixel Progress:%d/%d=%2d%%\n',count,N1*N2,round(100*count/N1/N2));
+    prognum = round(100*count/N1/N2);
+    fprintf('\nPixel Progress:%d/%d=%2d%%\n',count,N1*N2,prognum);
     ofli2 = reshape(ofli2,[N1 N2 200]);
 else
     ofli2 = zeros(3*N,N,20);
@@ -75,7 +76,7 @@ image(:,:,3) = blue;
 if usejava('awt')
     imtool(image)
 end
-
-imwrite(image,[datadir thisdir '/panel.png'])
+writeloc = sprintf('%s%s/panel%2d.png',datadir,thisdir,prognum);
+imwrite(image,writeloc);
 
 end

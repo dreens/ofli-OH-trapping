@@ -1,5 +1,7 @@
 #!/bin/bash
-cd ~/Documents/MATLAB/AnalyticTraps/
+cd ~/ofli-OH-trapping/
 module load matlab
 matlab -nodisplay -nodesktop -singleCompThread -r "try partialImage(1001,-0.5,3,'pin',5,'xy');catch;end;quit"
-mail -s "Progress Update" -a //data/ye/dare4983/splines/N1001_E-0.5_X3_pin_P5_xy/panel.png dave.reens@gmail.com <<< "Your friendly progress update from TERRA"
+cd //data/ye/dare4983/splines/N1001_E-0.5_X3_pin_P5_xy/
+imrecent=`ls -dt panel*.png | head -1`
+mail -s "Progress Update" -a $imrecent dave.reens@gmail.com <<< "Your friendly progress update from TERRA"

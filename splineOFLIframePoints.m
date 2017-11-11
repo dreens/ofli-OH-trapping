@@ -27,7 +27,9 @@ if strcmp(trap,'xdip')
     u = @(x,y,z) -exp(-2*x.^2-2*z.^2)/2-exp(-2*y.^2-2*z.^2)/2;
     uu = u(xx,yy,zz);
 elseif strcmp(trap,'pin')
+    fprintf('%s: Loading Pin Potential...\n',datestr(now,'HH-MM-SS'));
     load('pininterpB.mat','uu','xs','ys','zs');
+    fprintf('%s: Potential Loaded.\n',datestr(now,'HH-MM-SS'));
 else
     error('splineOFLI:input','Trap type ''%s'' not recognized.',trap)
 end
@@ -42,13 +44,15 @@ splinepot = spapi({o+1,o+1,o+1},{sk(xs),sk(ys),sk(zs)},-sk(uu));
 datadir = '//data/ye/dare4983/splines/';
 thisdir = sprintf('N%d_E%.1f_X%d_%s_P%d_%s',N,E,X,trap,P,plane);
 mkdir(datadir,thisdir);
-for mi=0:999
-    mkdir([datadir thisdir],num2str(mi))
+if ~exist([datadir thisdir '/999'],'dir')
+    for mi=0:999
+        mkdir([datadir thisdir],num2str(mi))
+    end
 end
 
 
-if ~exist([datadir 'pinC.mat'],'file')
-    
+if true%~exist([datadir 'pinC.mat'],'file')
+    fprintf('%s: Generating Full Spline...\n',datestr(now,'HH-MM-SS'));    
 
     % Take directional derivatives to get the forces.
     % a is a three valued spline; a = (ax ay az).
@@ -94,10 +98,11 @@ if ~exist([datadir 'pinC.mat'],'file')
     save([datadir 'pinC.mat'],'ff','-v7.3')
 
 else
-    
+    fprintf('%s: Loading Full Spline...\n',datestr(now,'HH-MM-SS'));    
     load([datadir 'pinC.mat'],'ff')
     
 end
+fprintf('%s: Full Spline Loaded.\n',datestr(now,'HH-MM-SS'));
 
 % Setup plane of trajectories to investigate. All begin in x-y plane with
 % velocity orthogonal to the plane. All have their velocity chosen
@@ -169,12 +174,14 @@ ofli2 = zeros(NT,T);
 save([datadir thisdir '/dims_' num2str(N1) 'x' num2str(N2) '.mat'],'N1','N2');
 
 % Randomize parfor ordering
+rng('shuffle')
 rindex = randperm(NT);
 
 vcp = vc; vcp(:) = vc(rindex);
 asp = as; asp(:) = as(rindex);
 bsp = bs; bsp(:) = bs(rindex);
 
+fprintf('%s: Entering parfor.\n',datestr(now,'HH-MM-SS'));
 parfor iii=1:NT
     
     i = rindex(iii);
@@ -188,12 +195,13 @@ parfor iii=1:NT
     % them directly.
     filestash = [datadir thisdir '/' num2str(mod(i,1000)) '/i=' num2str(i) '.mat'];
     if exist(filestash,'file')
+        disp(sprintf('%s: Point already Computed.',datestr(now,'HH-MM-SS')));
         d = load(filestash);
         for k=1:T
             oflirow(k) = d.stash(k);
         end
     else
-
+        disp(sprintf('%s: Computing Point.',datestr(now,'HH-MM-SS')));
         % Now get the spline back out now that we're on a compute node:
         % f = load([datadir 'pinB.mat']);
 
@@ -251,6 +259,7 @@ parfor iii=1:NT
             fli2 = (dy+0.5*d2y);
             ofli2p = fli2 - projection(fli2,flowy);
             oflirow(1:length(ntimes)) = log10(sqrt(sum(ofli2p.^2)));
+            disp(sprintf('%s: Computation Complete.',datestr(now,'HH-MM-SS')));
         end
         
         % Save the results of this step of the parfor loop directly so that
