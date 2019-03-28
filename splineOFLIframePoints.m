@@ -274,7 +274,7 @@ end % end parfor i=1:N
 ofli2(rindex,:) = ofli2(:,:);
 
 ofli2 = reshape(ofli2,[N1 N2 T]);
-
+ofli2 = 1;
 end % end function splineOFLIframe
 
 function saveparfor(file,stash)
