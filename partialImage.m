@@ -30,8 +30,11 @@ if exist(dimfile,'file')
         dir2file = [datadir thisdir '/' num2str(mod(i,1000)) '/i=' num2str(i) '.mat'];
         if exist(dir2file,'file')
             count = count + 1;
-            tmp = load(dir2file);
-            ofli2(i,:) = tmp.stash;
+            try
+                tmp = load(dir2file);
+                ofli2(i,:) = tmp.stash;
+            catch
+            end
         end
     end
     prognum = round(100*count/N1/N2);
@@ -43,12 +46,15 @@ else
     for i=1:3*N
         dir2file = [datadir thisdir '/i=' num2str(i) '.mat'];
         if exist(dir2file,'file')
-            tmp = load(dir2file);
-            if N~=size(tmp.stash,1)
-                ofli2 = zeros(3*N,size(tmp.stash,1),20);
+            try
+                tmp = load(dir2file);
+                if N~=size(tmp.stash,1)
+                    ofli2 = zeros(3*N,size(tmp.stash,1),20);
+                end
+                ofli2(i,:,:) = tmp.stash;
+                maxi = i;
+            catch
             end
-            ofli2(i,:,:) = tmp.stash;
-            maxi = i;
         end
     end
     ofli2 = ofli2(1:maxi,:,:);
